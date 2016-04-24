@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
@@ -25,25 +26,26 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 
+import de.iani.playerUUIDCache.CachedPlayer;
+
 public class BookShopListener implements Listener {
 
     private final BookShop plugin;
-    private HashMap<UUID, Chest> ChestViewers = new HashMap<UUID, Chest>();
+    private HashMap<UUID, Chest> chestViewers = new HashMap<UUID, Chest>();
 
-    private static final BlockFace[] DPChestFaces = { BlockFace.SELF, BlockFace.EAST, BlockFace.NORTH, BlockFace.WEST, BlockFace.SOUTH };
+    private static final BlockFace[] DOUBLE_CHEST_FACES = { BlockFace.SELF, BlockFace.EAST, BlockFace.NORTH, BlockFace.WEST, BlockFace.SOUTH };
 
     public BookShopListener(BookShop BookShop) {
         this.plugin = BookShop;
-        BookShop.getServer().getPluginManager().registerEvents(this, BookShop);
     }
 
     @EventHandler(priority = EventPriority.HIGH)
     public void invClose(InventoryCloseEvent event) {
-        Chest chest = BookShopListener.this.ChestViewers.remove(event.getPlayer().getUniqueId());
+        Chest chest = BookShopListener.this.chestViewers.remove(event.getPlayer().getUniqueId());
         if (chest != null) {
             Inventory blockInventory = chest.getBlockInventory();
             Block chestblock = chest.getBlock();
-            if (blockInventory != null && blockInventory.contains(Material.WRITTEN_BOOK) && isSign(chestblock.getRelative(BlockFace.UP))) {
+            if (blockInventory != null && isSign(chestblock.getRelative(BlockFace.UP))) {
                 Sign sign = (Sign) chestblock.getRelative(BlockFace.UP).getState();
                 if (sign.getLine(0).equalsIgnoreCase(plugin.config.getFirstLineOfEveryShop())) {
                     int slot = blockInventory.first(Material.WRITTEN_BOOK);
@@ -68,7 +70,7 @@ public class BookShopListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void invClick(InventoryClickEvent event) {
         Player player = (Player) event.getWhoClicked();
-        if (!this.ChestViewers.containsKey(player.getUniqueId())) {
+        if (!this.chestViewers.containsKey(player.getUniqueId())) {
             return;
         }
 
@@ -80,7 +82,7 @@ public class BookShopListener implements Listener {
 
             if (bookItem.getType() == Material.WRITTEN_BOOK) {
                 BookMeta bm = (BookMeta) bookItem.getItemMeta();
-                if (!bm.getAuthor().equalsIgnoreCase(player.getName()) && !this.plugin.PermissionsHandler.checkpermissionssilent(player, "BookShop.sell.other")) {
+                if (!bm.getAuthor().equalsIgnoreCase(player.getName()) && !this.plugin.getPermissionsHandler().checkPermissionSilent(player, "BookShop.sell.other")) {
                     this.plugin.PlayerLogger(player, this.plugin.getConfig().getString("Shop.error.onlyyourbooks." + this.plugin.getConfig().getString("language")), "Error");
                     event.setCancelled(true);
                     return;
@@ -92,7 +94,7 @@ public class BookShopListener implements Listener {
                     this.plugin.PlayerLogger(player, this.plugin.getConfig().getString("Shop.error.wrongItem." + this.plugin.config.language), "Error");
                     event.setCancelled(true);
                 }
-            } else if (((countWrittenBooks(this.ChestViewers.get(player.getUniqueId()).getInventory()) <= 0) || (!this.ChestViewers.get(player.getUniqueId()).getInventory().contains(event.getCurrentItem()))) && (countWrittenBooks(this.ChestViewers.get(player.getUniqueId()).getInventory()) > 0)) {
+            } else if (((countWrittenBooks(this.chestViewers.get(player.getUniqueId()).getInventory()) <= 0) || (!this.chestViewers.get(player.getUniqueId()).getInventory().contains(event.getCurrentItem()))) && (countWrittenBooks(this.chestViewers.get(player.getUniqueId()).getInventory()) > 0)) {
                 if (this.plugin.getConfig().getBoolean("useBookandQuill")) {
                     this.plugin.Logger("UseBooksandQuill = true", "Debug");
                     if ((!event.getCursor().getType().equals(Material.BOOK_AND_QUILL)) && (!event.getCurrentItem().getType().equals(Material.BOOK_AND_QUILL))) {
@@ -103,7 +105,7 @@ public class BookShopListener implements Listener {
                     this.plugin.PlayerLogger(player, this.plugin.getConfig().getString("Shop.error.onebook." + this.plugin.config.language), "Error");
                     event.setCancelled(true);
                 }
-            } else if ((event.isShiftClick()) && (countWrittenBooks(this.ChestViewers.get(player.getUniqueId()).getInventory()) > 0)) {
+            } else if ((event.isShiftClick()) && (countWrittenBooks(this.chestViewers.get(player.getUniqueId()).getInventory()) > 0)) {
                 this.plugin.PlayerLogger(player, this.plugin.getConfig().getString("Shop.error.onebook." + this.plugin.config.language), "Error");
                 event.setCancelled(true);
             }
@@ -137,36 +139,46 @@ public class BookShopListener implements Listener {
         }
 
         if (event.getLine(1).equalsIgnoreCase(plugin.config.getAdminShopName())) {
-            if (!plugin.PermissionsHandler.checkpermissions(p, "BookShop.create.admin")) {
+            if (!plugin.getPermissionsHandler().checkPermission(p, "BookShop.create.admin")) {
                 plugin.PlayerLogger(event.getPlayer(), "BookShop creation failed!", "Error");
                 event.setCancelled(true);
                 return;
             }
             event.setLine(1, plugin.config.getAdminShopName());
         } else {
-            if (!plugin.PermissionsHandler.checkpermissions(p, "BookShop.create")) {
+            if (!plugin.getPermissionsHandler().checkPermission(p, "BookShop.create")) {
                 plugin.PlayerLogger(event.getPlayer(), "BookShop creation failed!", "Error");
                 event.setCancelled(true);
                 return;
             }
             if (event.getLine(1).equalsIgnoreCase(event.getPlayer().getName()) || event.getLine(1).equalsIgnoreCase("")) {
-                String playername = plugin.getNameShortener().getShortName(p, true);
+                String playername = plugin.getNameShortener().getShortName(p.getUniqueId(), true);
                 if (playername.equalsIgnoreCase(plugin.config.getAdminShopName())) {
                     plugin.PlayerLogger(event.getPlayer(), "Invalid Name!", "Error");
                     event.setCancelled(true);
                     return;
                 }
                 event.setLine(1, playername);
-            } else if (!plugin.PermissionsHandler.checkpermissions(p, "BookShop.create.other")) {
+            } else if (!plugin.getPermissionsHandler().checkPermission(p, "BookShop.create.other")) {
                 plugin.PlayerLogger(event.getPlayer(), "BookShop creation failed!", "Error");
                 event.setCancelled(true);
                 return;
+            } else {
+                // admin & name given
+                CachedPlayer owner = plugin.getPlayerUUIDCache().getPlayer(event.getLine(1));
+                if (owner == null) {
+                    plugin.PlayerLogger(event.getPlayer(), "BookShop creation failed, unknown player!", "Error");
+                    event.setCancelled(true);
+                    return;
+                }
+                String playername = plugin.getNameShortener().getShortName(owner.getUUID(), true);
+                event.setLine(1, playername);
             }
         }
 
-        if (plugin.getConfig().getBoolean("ShopCreateMessage")) {
-            plugin.getServer().broadcast("The player " + p.getName() + " created a BookShop: " + p.getLocation(), "BookShop.admin");
-        }
+        // if (plugin.getConfig().getBoolean("ShopCreateMessage")) {
+        // plugin.getServer().broadcast("The player " + p.getName() + " created a BookShop: " + p.getLocation(), "BookShop.admin");
+        // }
         if (plugin.getConfig().getBoolean("useBookandQuill")) {
             plugin.PlayerLogger(p, plugin.getConfig().getString("Shop.success.books." + plugin.config.language), "Warning");
         }
@@ -180,7 +192,7 @@ public class BookShopListener implements Listener {
             Sign s = (Sign) event.getBlock().getState();
             String[] line = s.getLines();
             if (line[0].equalsIgnoreCase(this.plugin.config.getFirstLineOfEveryShop()) && isPriceLineValid(line)) {
-                if (!s.getLine(1).equalsIgnoreCase(plugin.getNameShortener().getShortName(p, false)) && !this.plugin.PermissionsHandler.checkpermissions(p, "BookShop.create.admin")) {
+                if (!s.getLine(1).equalsIgnoreCase(plugin.getNameShortener().getShortName(p.getUniqueId(), false)) && !this.plugin.getPermissionsHandler().checkPermission(p, "BookShop.create.admin")) {
                     event.setCancelled(true);
                 }
             }
@@ -209,7 +221,7 @@ public class BookShopListener implements Listener {
                         plugin.PlayerLogger(p, plugin.getConfig().getString("Shop.error.notyourshop." + plugin.config.language), "Warning");
                         event.setCancelled(true);
                     } else if (check == 1) {
-                        ChestViewers.put(p.getUniqueId(), (Chest) event.getClickedBlock().getState());
+                        chestViewers.put(p.getUniqueId(), (Chest) event.getClickedBlock().getState());
                     }
                 }
             }
@@ -264,16 +276,6 @@ public class BookShopListener implements Listener {
         return (temp > 0.0D || (b1 > 0.0D) && b0 >= b1);
     }
 
-    private int countWrittenBooks(Inventory inv) {
-        int a = 0;
-        for (ItemStack i : inv.getContents()) {
-            if (i != null && i.getType() == Material.WRITTEN_BOOK) {
-                a++;
-            }
-        }
-        return a;
-    }
-
     private boolean isChest(Block block) {
         return block.getType() == Material.CHEST;
     }
@@ -285,7 +287,7 @@ public class BookShopListener implements Listener {
 
     private int isProtectedChest(Block block, Player player) {
         boolean found = false;
-        for (BlockFace bf : DPChestFaces) {
+        for (BlockFace bf : DOUBLE_CHEST_FACES) {
             Block faceBlock = block.getRelative(bf);
             if (isChest(faceBlock)) {
                 int rv = isThisBlockProtectedChest(faceBlock, player);
@@ -306,10 +308,10 @@ public class BookShopListener implements Listener {
             if (upState instanceof Sign) {
                 Sign sign = (Sign) upState;
                 if (sign.getLine(0).equalsIgnoreCase(plugin.config.getFirstLineOfEveryShop())) {
-                    if (!sign.getLine(1).equalsIgnoreCase(plugin.config.getAdminShopName()) && sign.getLine(1).equalsIgnoreCase(plugin.getNameShortener().getShortName(player, false))) {
+                    if (!sign.getLine(1).equalsIgnoreCase(plugin.config.getAdminShopName()) && sign.getLine(1).equalsIgnoreCase(plugin.getNameShortener().getShortName(player.getUniqueId(), false))) {
                         return 1;
                     } else {
-                        if (plugin.PermissionsHandler.checkpermissions(player, "BookShop.admin")) {
+                        if (plugin.getPermissionsHandler().checkPermission(player, "BookShop.admin")) {
                             return 1;
                         } else {
                             return -1;
@@ -333,14 +335,14 @@ public class BookShopListener implements Listener {
     private void LinksKlick(PlayerInteractEvent event, String[] line, Player p, Sign s) {
         if (isPriceLineValid(line)) {
             Player player = event.getPlayer();
-            if (plugin.PermissionsHandler.checkpermissions(p, "BookShop.use")) {
+            if (plugin.getPermissionsHandler().checkPermission(p, "BookShop.use")) {
                 BookShopSignBuy(player, line, s);
             }
         }
     }
 
     private void BookShopSignBuy(Player player, String[] line, Sign s) {
-        if (!plugin.getNameShortener().getShortName(player, false).equalsIgnoreCase(line[1])) {
+        if (!plugin.getNameShortener().getShortName(player.getUniqueId(), false).equalsIgnoreCase(line[1])) {
             if (player.getInventory().firstEmpty() != -1) {
                 if (line[1].equalsIgnoreCase(plugin.config.getAdminShopName())) {
                     Chest chest = null;
@@ -356,7 +358,7 @@ public class BookShopListener implements Listener {
                                 double price = 0;
                                 price = getPrice(s, player, false);
                                 if (price >= 0) {
-                                    if ((plugin.getMoneyHandler().getBalance(player) - price) >= 0 && plugin.getMoneyHandler().subtract(price, player)) {
+                                    if ((plugin.getMoneyHandler().getBalance(player) - price) >= 0 && plugin.getMoneyHandler().subtractMoney(player, price)) {
                                         player.getInventory().addItem(item.clone());
                                         plugin.PlayerLogger(player, String.format(plugin.config.Shopsuccessbuy, s.getLine(2), s.getLine(1), price), "");
                                     } else {
@@ -386,25 +388,24 @@ public class BookShopListener implements Listener {
                             int Slot = chest.getInventory().first(Material.WRITTEN_BOOK);
                             ItemStack item = chest.getInventory().getItem(Slot);
                             if (item != null) {
-                                if (plugin.getConfig().getBoolean("useBookandQuill") && countBooks(chest.getInventory()) == 0) {
-                                    if (!player.getInventory().getItemInMainHand().getType().equals(Material.BOOK_AND_QUILL) && plugin.getConfig().getBoolean("useBookandQuill")) {
+                                if (plugin.getConfig().getBoolean("useBookandQuill") && countBookAndQuills(chest.getInventory()) == 0) {
+                                    if (player.getInventory().getItemInMainHand().getType() != Material.BOOK_AND_QUILL) {
                                         plugin.PlayerLogger(player, plugin.getConfig().getString("Shop.error.takeBookandQuill." + plugin.config.language), "Error");
                                         return;
                                     }
                                 }
                                 double price = 0;
-                                if (player.getInventory().getItemInMainHand().getType().equals(Material.BOOK_AND_QUILL)) {
+                                if (player.getInventory().getItemInMainHand().getType() == Material.BOOK_AND_QUILL) {
                                     price = getPrice(s, player, true);
                                 } else {
                                     price = getPrice(s, player, false);
                                 }
                                 if (price >= 0) {
                                     if ((plugin.getMoneyHandler().getBalance(player) - price) >= 0) {
-                                        if (player.getInventory().getItemInMainHand().getType().equals(Material.BOOK_AND_QUILL)) {
+                                        if (player.getInventory().getItemInMainHand().getType() == Material.BOOK_AND_QUILL) {
                                             player.getInventory().clear(player.getInventory().getHeldItemSlot());
                                             player.getInventory().addItem(item.clone());
-                                            player.saveData();
-                                        } else if (plugin.getConfig().getBoolean("useBookandQuill") && countBooks(chest.getInventory()) > 0) {
+                                        } else if (plugin.getConfig().getBoolean("useBookandQuill") && countBookAndQuills(chest.getInventory()) > 0) {
                                             int Slotbook = chest.getInventory().first(Material.BOOK_AND_QUILL);
                                             ItemStack itembook = chest.getInventory().getItem(Slotbook);
                                             if (itembook.getAmount() > 1) {
@@ -421,18 +422,19 @@ public class BookShopListener implements Listener {
                                                 return;
                                             }
                                         }
-                                        plugin.getMoneyHandler().subtract(price, player);
+                                        plugin.getMoneyHandler().subtractMoney(player, price);
                                         UUID realname = plugin.getNameShortener().getUUID(line[1]);
-                                        if (realname != null) {
-                                            plugin.getMoneyHandler().addmoney(price, plugin.getServer().getOfflinePlayer(realname));
+                                        OfflinePlayer owner = realname != null ? plugin.getServer().getOfflinePlayer(realname) : null;
+                                        CachedPlayer owner2 = owner == null ? plugin.getPlayerUUIDCache().getPlayer(line[1]) : plugin.getPlayerUUIDCache().getPlayer(owner.getUniqueId());
+
+                                        String ownerName = owner2 != null ? owner2.getName() : (owner != null && owner.getName() != null ? owner.getName() : line[1]);
+                                        if (owner != null) {
+                                            plugin.getMoneyHandler().addMoney(owner, price);
                                         }
-                                        plugin.PlayerLogger(player, String.format(plugin.config.Shopsuccessbuy, s.getLine(2), realname, price), "");
+                                        plugin.PlayerLogger(player, String.format(plugin.config.Shopsuccessbuy, s.getLine(2), ownerName, price), "");
                                         player.saveData();
                                         if (plugin.getServer().getPlayer(realname) != null) {
                                             plugin.PlayerLogger(plugin.getServer().getPlayer(line[1]), String.format(plugin.config.Shopsuccesssellerbuy, s.getLine(2), realname, price), "");
-                                            if (plugin.getConfig().getInt("tax") != 0) {
-                                                plugin.PlayerLogger(plugin.getServer().getPlayer(line[1]), String.format(plugin.getConfig().getString("Shop.success.tax." + plugin.config.language), plugin.getConfig().getInt("tax")), "Warning");
-                                            }
                                         }
                                     } else {
                                         plugin.PlayerLogger(player, plugin.config.Shoperrornotenoughmoneyconsumer, "Error");
@@ -458,17 +460,24 @@ public class BookShopListener implements Listener {
         }
     }
 
-    private int countBooks(Inventory inv) {
+    private int countBookAndQuills(Inventory inv) {
         int a = 0;
         for (ItemStack i : inv.getContents()) {
-            if (i != null) {
-                if (i.getType().equals(Material.BOOK_AND_QUILL)) {
-                    plugin.Logger("Item " + i.getType().name() + " Slotid: " + inv.contains(i), "Debug");
-                    a++;
-                }
+            if (i != null && i.getType() == Material.BOOK_AND_QUILL) {
+                a++;
             }
         }
-        plugin.Logger("BookandQuill: " + a, "Debug");
         return a;
     }
+
+    private int countWrittenBooks(Inventory inv) {
+        int a = 0;
+        for (ItemStack i : inv.getContents()) {
+            if (i != null && i.getType() == Material.WRITTEN_BOOK) {
+                a++;
+            }
+        }
+        return a;
+    }
+
 }

@@ -8,20 +8,24 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import de.iani.playerUUIDCache.PlayerUUIDCache;
+
 public class BookShop extends JavaPlugin {
     private LoggerUtility logger;
     public ConfigHandler config;
-    public PermissionsChecker PermissionsHandler;
-    private EconomyHandler MoneyHandler;
+    private PermissionHandler permissionsHandler;
+    private EconomyHandler moneyHandler;
     private NameShortener nameShortener;
+    private PlayerUUIDCache playerUUIDCache;
 
     @Override
     public void onEnable() {
         this.logger = new LoggerUtility(this);
+        this.playerUUIDCache = (PlayerUUIDCache) getServer().getPluginManager().getPlugin("PlayerUUIDCache");
         this.config = new ConfigHandler(this);
         this.nameShortener = new NameShortener(this);
-        this.MoneyHandler = new EconomyHandler(this);
-        this.PermissionsHandler = new PermissionsChecker(this);
+        this.moneyHandler = new EconomyHandler(this);
+        this.permissionsHandler = new PermissionHandler(this);
         getServer().getPluginManager().registerEvents(new BookShopListener(this), this);
     }
 
@@ -29,12 +33,20 @@ public class BookShop extends JavaPlugin {
         return logger;
     }
 
+    public PlayerUUIDCache getPlayerUUIDCache() {
+        return playerUUIDCache;
+    }
+
     public NameShortener getNameShortener() {
         return nameShortener;
     }
 
     public EconomyHandler getMoneyHandler() {
-        return MoneyHandler;
+        return moneyHandler;
+    }
+
+    public PermissionHandler getPermissionsHandler() {
+        return permissionsHandler;
     }
 
     @Override

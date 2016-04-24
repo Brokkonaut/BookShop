@@ -2,7 +2,7 @@ name: BookShop
 version: 6.0
 description: Shop for books.
 author: ibhh, Brokkonaut
-softdepend: [Vault]
+softdepend: [Vault, PlayerUUIDCache]
 
 main: me.ibhh.BookShop.BookShop
 

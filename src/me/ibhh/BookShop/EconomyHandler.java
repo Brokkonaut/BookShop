@@ -6,12 +6,11 @@ import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
 
 import org.bukkit.OfflinePlayer;
-import org.bukkit.entity.Player;
 import org.bukkit.plugin.RegisteredServiceProvider;
 
 public class EconomyHandler {
     private BookShop plugin;
-    public static Economy economy = null;
+    private Economy economy;
 
     public EconomyHandler(BookShop pl) {
         plugin = pl;
@@ -32,24 +31,24 @@ public class EconomyHandler {
         return economy != null;
     }
 
-    public double getBalance(Player player) {
+    public double getBalance(OfflinePlayer player) {
         if (economy == null) {
             return 0.0;
         }
         return economy.getBalance(player);
     }
 
-    public boolean subtract(double amountsubtract, Player player) {
+    public boolean subtractMoney(OfflinePlayer player, double amount) {
         if (economy == null) {
             return false;
         }
-        EconomyResponse result = economy.withdrawPlayer(player, amountsubtract);
+        EconomyResponse result = economy.withdrawPlayer(player, amount);
         return result != null && result.transactionSuccess();
     }
 
-    public void addmoney(double amountadd, OfflinePlayer player) {
+    public void addMoney(OfflinePlayer player, double amount) {
         try {
-            economy.depositPlayer(player, amountadd);
+            economy.depositPlayer(player, amount);
         } catch (Exception e) {
             plugin.getLogger().log(Level.SEVERE, "Cant add money! Does account exist? :" + player.getName(), e);
         }
