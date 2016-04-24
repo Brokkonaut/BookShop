@@ -6,7 +6,9 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+
 import me.ibhh.BookShop.BookShop;
+
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -69,9 +71,6 @@ public class LoggerUtility {
         } catch (Exception e) {
             e.printStackTrace();
             System.out.println("[Paypassage] Error: Uncatch Exeption!");
-            if (plugin.getReportHandler() != null) {
-                plugin.getReportHandler().report(3317, "Logger doesnt work", e.getMessage(), "Paypassage", e);
-            }
         }
     }
 
@@ -106,9 +105,6 @@ public class LoggerUtility {
         } catch (Exception e) {
             e.printStackTrace();
             System.out.println("[Paypassage] Error: Uncatch Exeption!");
-            if (plugin.getReportHandler() != null) {
-                plugin.getReportHandler().report(3317, "PlayerLogger doesnt work", e.getMessage(), "Paypassage", e);
-            }
         }
     }
 
@@ -132,9 +128,9 @@ public class LoggerUtility {
             FileWriter fstream = new FileWriter(file, true);
             PrintWriter out = new PrintWriter(fstream);
             out.println("[" + Stream + "] " + in);
-            //Close the output stream
+            // Close the output stream
             out.close();
-        } catch (Exception e) {//Catch exception if any
+        } catch (Exception e) {// Catch exception if any
             System.out.println("Error: " + e.getMessage());
         }
     }

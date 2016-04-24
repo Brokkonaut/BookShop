@@ -2,9 +2,12 @@ package me.ibhh.BookShop.Tools;
 
 import java.io.File;
 import java.util.HashMap;
+import java.util.UUID;
 import java.util.logging.Level;
 
+import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class NameShortener {
@@ -15,8 +18,8 @@ public class NameShortener {
     private final JavaPlugin plugin;
     private final File databaseFile;
     private final YamlConfiguration namesConfig;
-    private final HashMap<String, String> realToShortNames;
-    private final HashMap<String, String> shortToRealNames;
+    private final HashMap<UUID, String> realToShortNames;
+    private final HashMap<String, UUID> shortToRealNames;
     public final static int NAME_LENGTH_MAX = 15;
 
     /**
@@ -24,7 +27,8 @@ public class NameShortener {
      * <b>shortnames.yaml</b> im Pluginverzeichnis verwendet. Achtung: Es darf
      * nur eine Instanz pro Plugin hiervon erstellt werden.
      *
-     * @param plugin das Plugin, das diesen Namenskürzer verwendet
+     * @param plugin
+     *            das Plugin, das diesen Namenskürzer verwendet
      */
     public NameShortener(JavaPlugin plugin) {
         this(plugin, new File(plugin.getDataFolder(), "shortnames.yaml"));
@@ -34,8 +38,10 @@ public class NameShortener {
      * Erzeugt einen neuen Namenskürzer. Achtung: Es darf nur eine Instanz pro
      * Plugin hiervon erstellt werden.
      *
-     * @param plugin das Plugin, das diesen Namenskürzer verwendet
-     * @param databaseFile eine Datenbankdatei mit den Kurznamen
+     * @param plugin
+     *            das Plugin, das diesen Namenskürzer verwendet
+     * @param databaseFile
+     *            eine Datenbankdatei mit den Kurznamen
      */
     public NameShortener(JavaPlugin plugin, File databaseFile) {
         if (plugin.getServer() == null) {
@@ -43,24 +49,58 @@ public class NameShortener {
         }
         this.plugin = plugin;
         this.databaseFile = databaseFile;
-        realToShortNames = new HashMap<String, String>();
-        shortToRealNames = new HashMap<String, String>();
+        realToShortNames = new HashMap<UUID, String>();
+        shortToRealNames = new HashMap<String, UUID>();
         namesConfig = new YamlConfiguration();
 
-        //namen laden wenn möglich
+        // namen laden wenn möglich
         if (databaseFile.exists()) {
             try {
                 namesConfig.load(databaseFile);
             } catch (Exception e) {
                 plugin.getLogger().log(Level.SEVERE, "Could not load short names database " + databaseFile, e);
             }
-
+            boolean converting = false;
             for (String realName : namesConfig.getKeys(false)) {
                 String shortName = namesConfig.getString(realName);
-                realToShortNames.put(realName.toLowerCase(), shortName);
-                shortToRealNames.put(shortName.toLowerCase(), realName);
+                UUID uuid = null;
+                if (realName.length() <= 36) {
+                    if (!converting) {
+                        plugin.getLogger().info("Start converting Names to UUIDs - This could take some time...");
+                        converting = true;
+                    }
+                    uuid = convertRealName(realName);
+                    namesConfig.set(realName, null);
+                    if (uuid != null) {
+                        namesConfig.set(uuid.toString(), shortName);
+                    }
+                } else {
+                    try {
+                        uuid = UUID.fromString(realName);
+                    } catch (IllegalArgumentException e) {
+                        // ignore
+                    }
+                }
+                if (uuid != null) {
+                    realToShortNames.put(uuid, shortName);
+                    shortToRealNames.put(shortName.toLowerCase(), uuid);
+                }
+            }
+            if (converting) {
+                try {
+                    namesConfig.save(databaseFile);
+                } catch (Exception e) {
+                    plugin.getLogger().log(Level.SEVERE, "Could not save short names database " + databaseFile, e);
+                }
+                plugin.getLogger().info("Completed converting Names to UUIDs.");
             }
         }
+    }
+
+    @SuppressWarnings("deprecation")
+    private UUID convertRealName(String realName) {
+        OfflinePlayer op = plugin.getServer().getOfflinePlayer(realName);
+        return op != null ? op.getUniqueId() : null;
     }
 
     /**
@@ -68,40 +108,40 @@ public class NameShortener {
      * Schild passt. Bei neuen angepassten Namen wird der Name in die Datenbank
      * eingetragen
      *
-     * @param realName der echte Name des Spielers. Darf nicht null sein.
+     * @param realName
+     *            der echte Name des Spielers. Darf nicht null sein.
      * @return der Name, der auf dem Schild erscheinen soll. Ist niemals null.
      */
-    public synchronized String getShortName(String realName) {
-        realName = realName.trim();
-        //prüfen, ob bereits ein shortname existiert
-        String shortName = realToShortNames.get(realName.toLowerCase());
+    public synchronized String getShortName(Player player, boolean addNewToDatabase) {
+        UUID uuid = player.getUniqueId();
+        // prüfen, ob bereits ein shortname existiert
+        String shortName = realToShortNames.get(uuid);
         if (shortName != null) {
             return shortName;
         }
-        //ansonsten prüfen, ob der name zu lang ist, oder ob es einen gleichen shortnamen gibt (dann muss er angepasst werden)
-        if (realName.length() <= NAME_LENGTH_MAX && !shortToRealNames.containsKey(realName.toLowerCase())) {
-            return realName;
-        }
-        //der name ist ungültig, also müssen wir einen passenden namen suchen
+
+        // wir müssen einen passenden namen suchen
+        String realName = player.getName();
         int counter = 0;
         while (true) {
             String countString = counter == 0 ? "" : Integer.toString(counter);
-            shortName = realName.substring(0, NAME_LENGTH_MAX - countString.length()) + countString;
+            shortName = (realName.length() > NAME_LENGTH_MAX - countString.length() ? realName.substring(0, NAME_LENGTH_MAX - countString.length()) : realName) + countString;
             String shortNameLower = shortName.toLowerCase();
-            //namen von vorhandenen spielern sind immer ungültig
-            //namen, die schon kurznamen sind, sind auch ungültig
-            if (plugin.getServer().getOfflinePlayer(shortName).hasPlayedBefore() || realToShortNames.containsKey(shortNameLower) || shortToRealNames.containsKey(shortNameLower)) {
+            // namen, die schon kurznamen sind, sind ungültig
+            if (shortToRealNames.containsKey(shortNameLower)) {
                 counter += 1;
                 continue;
             }
-            //der name ist gültig: eintragen und speichern
-            realToShortNames.put(realName.toLowerCase(), shortName);
-            shortToRealNames.put(shortNameLower, realName);
-            namesConfig.set(realName, shortName);
-            try {
-                namesConfig.save(databaseFile);
-            } catch (Exception e) {
-                plugin.getLogger().log(Level.SEVERE, "Could not save short names database " + databaseFile, e);
+            if (addNewToDatabase) {
+                // der name ist gültig: eintragen und speichern
+                realToShortNames.put(uuid, shortName);
+                shortToRealNames.put(shortNameLower, uuid);
+                namesConfig.set(uuid.toString(), shortName);
+                try {
+                    namesConfig.save(databaseFile);
+                } catch (Exception e) {
+                    plugin.getLogger().log(Level.SEVERE, "Could not save short names database " + databaseFile, e);
+                }
             }
             return shortName;
         }
@@ -111,16 +151,11 @@ public class NameShortener {
      * Gibt für einen Namen auf einem Schild den echten Namen des SPielers
      * zurück.
      *
-     * @param shortName der Name auf dem Schild. Darf nicht null sein.
+     * @param shortName
+     *            der Name auf dem Schild. Darf nicht null sein.
      * @return der echte Name. Ist niemals null.
      */
-    public synchronized String getRealName(String shortName) {
-        shortName = shortName.trim();
-        String realName = shortToRealNames.get(shortName.toLowerCase());
-        if (realName != null) {
-            return realName;
-        }
-        //wenn kein mapping existiert, ist das ein echter name
-        return shortName;
+    public synchronized UUID getUUID(String shortName) {
+        return shortToRealNames.get(shortName.trim().toLowerCase());
     }
 }

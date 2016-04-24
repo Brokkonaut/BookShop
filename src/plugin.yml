@@ -1,8 +1,7 @@
 name: BookShop
-version: 5.2
+version: 6.0
 description: Shop for books.
-author: ibhh
-website: http://ibhh.de/BookShop.jar
+author: ibhh, Brokkonaut
 softdepend: [Vault]
 
 main: me.ibhh.BookShop.BookShop
