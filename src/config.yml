@@ -1,4 +1,4 @@
-#Here is the configfile of BookShop:
+﻿#Here is the configfile of BookShop:
 #Read the comments please!
 #This choose the language.
 language: en
@@ -11,44 +11,44 @@ AdminShop: AdminShop
 #This is the language config: edit these if you add an new language, or you want other sentences, but never delete parts beginning with "%"!
 permissions:
   error:
-    de: Wir haben ein Problem! Dies darfst Du nicht machen!
-    en: we have a problem! You musnt do this!
+    de: Wir haben ein Problem! Du darfst dies nicht machen!
+    en: We have a problem! You don't have the permission to do this!
 Shop:
   success:
     create:
       de: Shop erfolgreich erstellt.
       en: Shop created successfully.
     buy:
-      de: Du hast das Buch '%1$s' von %2$s fuer %3$s gekauft.
-      en: You bought the book '%1$s' from %2$s for %3$s.
+      de: Du hast das Buch '%1$s' von %2$s für %3$s gekauft.
+      en: You have bought the book '%1$s' from %2$s for %3$s.
     sellerbuy:
-      de: Player %2$s hat von Dir das Buch '%1$s' fuer %3$s gekauft.
+      de: Player %2$s hat von dir das Buch '%1$s' für %3$s gekauft.
       en: Player %2$s has bought the book '%1$s' from you for %3$s.
     books:
-      de: Du kannst beschreibare Buecher in die Kiste legen um den Kaeufern das mitbringen von Buechern zu ersparen.
-      en: You can place book and quill in the chest, so players neednt to take a book with them if they want to purchase a book.
+      de: Du kannst beschreibare Bücher in die Kiste legen um den Käufern das Mitbringen von Büchern zu ersparen.
+      en: You can place book and quill in the chest, so players don't have to take a book with them, if they want to purchase a book.
   error:
     onlyyourbooks:
-      de: Du darfst nur eigene Buecher verkaufen. Du hast die Permission BookShop.sell.other nicht!
-      en: You are only allowed to sell your own books. You havent got the Permission BookShop.sell.other!
+      de: Du darfst nur eigene Bücher verkaufen. Du hast die Permission BookShop.sellother nicht!
+      en: You are only allowed to sell your own books. You don't have the permission BookShop.sellother!
     inventoryfull:
-      de: Dein Inventar ist voll! Bitte leere es um hier kaufen zu koennen.
+      de: Dein Inventar ist voll! Bitte leere es um hier kaufen zu können.
       en: Your inventory is full! Please clear some slots to purchase here.
     basecost:
       de: Der Mindestpreis ist %1$s!
       en: The lowest price is %1$s!
     notenoughmoneyconsumer:
       de: Du hast nicht genug Geld!
-      en: You havent got enough money!
+      en: You don't have enough money!
     notyourshop:
       de: Du hast keinen Zugriff auf diesen Shop!
-      en: You are NOT allowed to open this shop!
+      en: You are not allowed to open this shop!
     nochest:
-      de: Der Shop benoetigt eine leere Kiste unterhalb des Schildes!
-      en: The shop needs a empty chest under the sign!
+      de: Der Shop benötigt eine leere Kiste unterhalb des Schildes!
+      en: The shop needs an empty chest below the sign!
     nochest2:
-      de: Der Shop benoetigt eine Kiste unterhalb des Schildes!
-      en: The shop needs a chest under the sign!
+      de: Der Shop benötigt eine Kiste unterhalb des Schildes!
+      en: The shop needs a chest below the sign!
     nobook:
       de: Kein Buch im Shop gefunden!
       en: No book found in the shop!
@@ -59,7 +59,7 @@ Shop:
       de: Falscher Preis!
       en: Wrong price!
     wrongItem:
-      de: Es duerfen nur fertige Buecher in die Kiste gelegt werden!
+      de: Es dürfen nur fertige Bücher in die Kiste gelegt werden!
       en: You are only allowed to place finished books in the chest!
     takeBookandQuill:
       de: Bitte nimm ein Buch mit Feder in die Hand um ein Buch zu kaufen!
