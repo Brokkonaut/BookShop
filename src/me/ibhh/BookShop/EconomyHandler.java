@@ -15,7 +15,7 @@ public class EconomyHandler {
     public EconomyHandler(BookShop pl) {
         plugin = pl;
         if (!setupEconomy()) {
-            plugin.getLogger().severe("No economy plugin found!");
+            throw new IllegalStateException("No economy plugin found!");
         }
     }
 
@@ -32,32 +32,35 @@ public class EconomyHandler {
     }
 
     public double getBalance(OfflinePlayer player) {
-        if (economy == null) {
-            return 0.0;
+        try {
+            return economy.getBalance(player);
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, "Could not get balance of player:" + player.getName() + " (" + player.getUniqueId() + ")", e);
         }
-        return economy.getBalance(player);
+        return 0.0;
     }
 
     public String formatMoney(double amount) {
-        if (economy == null) {
-            return Double.toString(amount);
-        }
         return economy.format(amount);
     }
 
     public boolean subtractMoney(OfflinePlayer player, double amount) {
-        if (economy == null) {
-            return false;
+        try {
+            EconomyResponse result = economy.withdrawPlayer(player, amount);
+            return result != null && result.transactionSuccess();
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, "Could not take money from player:" + player.getName() + " (" + player.getUniqueId() + ")", e);
         }
-        EconomyResponse result = economy.withdrawPlayer(player, amount);
-        return result != null && result.transactionSuccess();
+        return false;
     }
 
-    public void addMoney(OfflinePlayer player, double amount) {
+    public boolean addMoney(OfflinePlayer player, double amount) {
         try {
-            economy.depositPlayer(player, amount);
+            EconomyResponse result = economy.depositPlayer(player, amount);
+            return result != null && result.transactionSuccess();
         } catch (Exception e) {
-            plugin.getLogger().log(Level.SEVERE, "Cant add money! Does account exist? :" + player.getName(), e);
+            plugin.getLogger().log(Level.SEVERE, "Could not give money to player:" + player.getName() + " (" + player.getUniqueId() + ")", e);
         }
+        return false;
     }
 }

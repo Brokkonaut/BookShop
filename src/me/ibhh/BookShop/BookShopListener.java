@@ -29,7 +29,6 @@ import org.bukkit.inventory.meta.BookMeta;
 import de.iani.playerUUIDCache.CachedPlayer;
 
 public class BookShopListener implements Listener {
-
     private final BookShop plugin;
     private final HashMap<UUID, Chest> chestViewers;
 

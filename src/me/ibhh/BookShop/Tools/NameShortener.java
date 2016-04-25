@@ -23,7 +23,7 @@ public class NameShortener {
     private final YamlConfiguration namesConfig;
     private final HashMap<UUID, String> realToShortNames;
     private final HashMap<String, UUID> shortToRealNames;
-    public final static int NAME_LENGTH_MAX = 15;
+    private final static int NAME_LENGTH_MAX = 15;
 
     /**
      * Erzeugt einen neuen Namenskürzer, der die Namen in der Datei

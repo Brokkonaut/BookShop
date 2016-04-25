@@ -20,8 +20,8 @@ public class BookShop extends JavaPlugin {
     public void onEnable() {
         this.playerUUIDCache = (PlayerUUIDCache) getServer().getPluginManager().getPlugin("PlayerUUIDCache");
         this.config = new ConfigHandler(this);
-        this.nameShortener = new NameShortener(this);
         this.moneyHandler = new EconomyHandler(this);
+        this.nameShortener = new NameShortener(this);
         getServer().getPluginManager().registerEvents(new BookShopListener(this), this);
     }
 
