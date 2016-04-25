@@ -38,6 +38,13 @@ public class EconomyHandler {
         return economy.getBalance(player);
     }
 
+    public String formatMoney(double amount) {
+        if (economy == null) {
+            return Double.toString(amount);
+        }
+        return economy.format(amount);
+    }
+
     public boolean subtractMoney(OfflinePlayer player, double amount) {
         if (economy == null) {
             return false;

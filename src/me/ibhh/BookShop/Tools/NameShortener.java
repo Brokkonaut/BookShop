@@ -27,7 +27,7 @@ public class NameShortener {
 
     /**
      * Erzeugt einen neuen Namenskürzer, der die Namen in der Datei
-     * <b>shortnames.yaml</b> im Pluginverzeichnis verwendet. Achtung: Es darf
+     * <b>shortnames.yml</b> im Pluginverzeichnis verwendet. Achtung: Es darf
      * nur eine Instanz pro Plugin hiervon erstellt werden.
      *
      * @param plugin
