@@ -1,5 +1,5 @@
 name: BookShop
-version: 6.0
+version: 6.1
 description: Shop for books.
 author: ibhh, Brokkonaut
 softdepend: [Vault, PlayerUUIDCache]
@@ -11,7 +11,7 @@ commands:
     description: Version information
 permissions:
   BookShop.admin:
-    description: Gives you full access to bookshop.
+    description: Gives you full access to bookshop, including creation/destruction of adminshops and shops for other players.
     children:
       BookShop.use: true
       BookShop.create: true
@@ -22,7 +22,7 @@ permissions:
     default: true
   BookShop.create:
     description: Allows you to create bookshops.
-    default: op
+    default: true
   BookShop.sellother:
     description: Allows you to sell books not written by you.
     default: op
