@@ -121,7 +121,7 @@ public class BookShopListener implements Listener {
         }
         Player p = event.getPlayer();
         if (!isPriceLineValid(line)) {
-            plugin.sendErrorMessage(p, "BookShop creation failed!");
+            plugin.sendErrorMessage(p, plugin.getConfigHandler().getTranslatedString("Shop.error.wrongPrice"));
             event.setCancelled(true);
             return;
         }
@@ -142,14 +142,12 @@ public class BookShopListener implements Listener {
         String playerName;
         if (event.getLine(1).equalsIgnoreCase(plugin.getConfigHandler().getAdminShopName())) {
             if (!plugin.checkPermission(p, "BookShop.admin")) {
-                plugin.sendErrorMessage(event.getPlayer(), "BookShop creation failed!");
                 event.setCancelled(true);
                 return;
             }
             playerName = plugin.getConfigHandler().getAdminShopName();
         } else {
             if (!plugin.checkPermission(p, "BookShop.create")) {
-                plugin.sendErrorMessage(event.getPlayer(), "BookShop creation failed!");
                 event.setCancelled(true);
                 return;
             }
@@ -161,7 +159,6 @@ public class BookShopListener implements Listener {
                     return;
                 }
             } else if (!plugin.checkPermission(p, "BookShop.admin")) {
-                plugin.sendErrorMessage(event.getPlayer(), "BookShop creation failed!");
                 event.setCancelled(true);
                 return;
             } else {
@@ -179,9 +176,8 @@ public class BookShopListener implements Listener {
         event.setLine(1, playerName);
 
         plugin.getLogger().info("The player " + p.getName() + " created a BookShop: " + p.getLocation());
-        plugin.sendInfoMessage(p, plugin.getConfigHandler().getTranslatedString("Shop.success.books"));
-
         plugin.sendInfoMessage(event.getPlayer(), plugin.getConfigHandler().getTranslatedString("Shop.success.create"));
+        plugin.sendInfoMessage(p, plugin.getConfigHandler().getTranslatedString("Shop.success.books"));
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -316,12 +312,10 @@ public class BookShopListener implements Listener {
                 if (sign.getLine(0).equalsIgnoreCase(plugin.getConfigHandler().getFirstLineOfEveryShop())) {
                     if (!sign.getLine(1).equalsIgnoreCase(plugin.getConfigHandler().getAdminShopName()) && sign.getLine(1).equalsIgnoreCase(plugin.getNameShortener().getShortName(player.getUniqueId(), false))) {
                         return 1;
+                    } else if (plugin.checkPermission(player, "BookShop.admin")) {
+                        return 1;
                     } else {
-                        if (plugin.checkPermission(player, "BookShop.admin")) {
-                            return 1;
-                        } else {
-                            return -1;
-                        }
+                        return -1;
                     }
                 }
             }
