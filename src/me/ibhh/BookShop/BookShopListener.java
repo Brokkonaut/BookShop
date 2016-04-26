@@ -25,6 +25,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.BookMeta;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import de.iani.playerUUIDCache.CachedPlayer;
 
@@ -49,22 +50,29 @@ public class BookShopListener implements Listener {
             if (blockInventory != null && isSign(signBlock)) {
                 Sign sign = (Sign) signBlock.getState();
                 if (plugin.getConfigHandler().isFirstLineOfEveryShop(sign.getLine(0))) {
-                    int slot = blockInventory.first(Material.WRITTEN_BOOK);
+                    String title = "";
+                    int slot = blockInventory.first(Material.PAPER);
                     if (slot >= 0) {
                         ItemStack item = blockInventory.getItem(slot);
-                        BookMeta bm = (BookMeta) item.getItemMeta();
-                        String title = ChatColor.stripColor(bm.getTitle());
-                        if (title.length() > 15) {
-                            title = title.substring(0, 15);
+                        ItemMeta meta = item.getItemMeta();
+                        if (meta != null && meta.hasDisplayName()) {
+                            title = meta.getDisplayName();
                         }
-                        sign.setLine(0, plugin.getConfigHandler().getFirstLineOfEveryShopColor());
-                        sign.setLine(2, title);
-                        sign.update();
-                    } else {
-                        sign.setLine(0, plugin.getConfigHandler().getFirstLineOfEveryShopColor());
-                        sign.setLine(2, "");
-                        sign.update();
                     }
+                    if (title.equals("")) {
+                        slot = blockInventory.first(Material.WRITTEN_BOOK);
+                        if (slot >= 0) {
+                            ItemStack item = blockInventory.getItem(slot);
+                            BookMeta bm = (BookMeta) item.getItemMeta();
+                            title = ChatColor.stripColor(bm.getTitle());
+                            if (title.length() > 15) {
+                                title = title.substring(0, 15);
+                            }
+                        }
+                    }
+                    sign.setLine(0, plugin.getConfigHandler().getFirstLineOfEveryShopColor());
+                    sign.setLine(2, title);
+                    sign.update();
                 }
             }
         }
@@ -95,13 +103,7 @@ public class BookShopListener implements Listener {
                 }
             }
 
-            if (bookItem.getType() != Material.WRITTEN_BOOK) {
-                if (bookItem.getType() != Material.BOOK_AND_QUILL) {
-                    this.plugin.sendErrorMessage(player, plugin.getConfigHandler().getTranslatedString("Shop.error.wrongItem"));
-                    event.setCancelled(true);
-                    return;
-                }
-            } else {
+            if (bookItem.getType() == Material.WRITTEN_BOOK) {
                 int slot = event.getInventory().first(Material.WRITTEN_BOOK);
                 if (slot >= 0) {
                     ItemStack existingBook = event.getInventory().getItem(slot);
