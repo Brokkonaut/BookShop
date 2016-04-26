@@ -48,7 +48,7 @@ public class BookShopListener implements Listener {
             Block signBlock = chestblock.getRelative(BlockFace.UP);
             if (blockInventory != null && isSign(signBlock)) {
                 Sign sign = (Sign) signBlock.getState();
-                if (sign.getLine(0).equalsIgnoreCase(plugin.getConfigHandler().getFirstLineOfEveryShop())) {
+                if (plugin.getConfigHandler().isFirstLineOfEveryShop(sign.getLine(0))) {
                     int slot = blockInventory.first(Material.WRITTEN_BOOK);
                     if (slot >= 0) {
                         ItemStack item = blockInventory.getItem(slot);
@@ -57,9 +57,11 @@ public class BookShopListener implements Listener {
                         if (title.length() > 15) {
                             title = title.substring(0, 15);
                         }
+                        sign.setLine(0, plugin.getConfigHandler().getFirstLineOfEveryShopColor());
                         sign.setLine(2, title);
                         sign.update();
                     } else {
+                        sign.setLine(0, plugin.getConfigHandler().getFirstLineOfEveryShopColor());
                         sign.setLine(2, "");
                         sign.update();
                     }
@@ -116,7 +118,7 @@ public class BookShopListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onSignChange(SignChangeEvent event) {
         String[] line = event.getLines();
-        if (!line[0].equalsIgnoreCase(this.plugin.getConfigHandler().getFirstLineOfEveryShop())) {
+        if (!plugin.getConfigHandler().isFirstLineOfEveryShop(line[0])) {
             return;
         }
         Player p = event.getPlayer();
@@ -172,7 +174,7 @@ public class BookShopListener implements Listener {
                 playerName = plugin.getNameShortener().getShortName(owner.getUUID(), true);
             }
         }
-        event.setLine(0, plugin.getConfigHandler().getFirstLineOfEveryShop());
+        event.setLine(0, plugin.getConfigHandler().getFirstLineOfEveryShopColor());
         event.setLine(1, playerName);
 
         plugin.getLogger().info("The player " + p.getName() + " created a BookShop: " + p.getLocation());
@@ -186,7 +188,7 @@ public class BookShopListener implements Listener {
         if (isSign(event.getBlock())) {
             Sign s = (Sign) event.getBlock().getState();
             String[] line = s.getLines();
-            if (line[0].equalsIgnoreCase(this.plugin.getConfigHandler().getFirstLineOfEveryShop()) && isPriceLineValid(line)) {
+            if (plugin.getConfigHandler().isFirstLineOfEveryShop(line[0]) && isPriceLineValid(line)) {
                 if (!s.getLine(1).equalsIgnoreCase(plugin.getNameShortener().getShortName(p.getUniqueId(), false)) && !this.plugin.checkPermission(p, "BookShop.admin")) {
                     event.setCancelled(true);
                 }
@@ -203,7 +205,7 @@ public class BookShopListener implements Listener {
                 if (isSign(eventblock)) {
                     Sign s = (Sign) eventblock.getState();
                     String[] line = s.getLines();
-                    if (line[0].equalsIgnoreCase(plugin.getConfigHandler().getFirstLineOfEveryShop())) {
+                    if (plugin.getConfigHandler().isFirstLineOfEveryShop(line[0])) {
                         buyFromShop(p, line, s);
                     }
                 }
@@ -309,7 +311,7 @@ public class BookShopListener implements Listener {
             BlockState upState = up.getState();
             if (upState instanceof Sign) {
                 Sign sign = (Sign) upState;
-                if (sign.getLine(0).equalsIgnoreCase(plugin.getConfigHandler().getFirstLineOfEveryShop())) {
+                if (plugin.getConfigHandler().isFirstLineOfEveryShop(sign.getLine(0))) {
                     if (!sign.getLine(1).equalsIgnoreCase(plugin.getConfigHandler().getAdminShopName()) && sign.getLine(1).equalsIgnoreCase(plugin.getNameShortener().getShortName(player.getUniqueId(), false))) {
                         return 1;
                     } else if (plugin.checkPermission(player, "BookShop.admin")) {

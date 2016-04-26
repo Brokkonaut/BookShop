@@ -7,6 +7,7 @@ public class ConfigHandler {
     private BookShop plugin;
     private String language;
     private String firstLineOfEveryShop;
+    private String firstLineOfEveryShopColor;
     private String adminShopName;
 
     private String messagePrefix;
@@ -29,11 +30,20 @@ public class ConfigHandler {
         messagePrefix = config.getBoolean("UsePrefix") ? ((prefixColor != null ? prefixColor.toString() : "") + "[" + config.getString("Prefix") + "] ") : "";
         messageColor = textColor == null ? "" : textColor.toString();
         firstLineOfEveryShop = config.getString("FirstLineOfEveryShop");
+        firstLineOfEveryShopColor = ChatColor.BLUE + firstLineOfEveryShop;
         adminShopName = config.getString("AdminShop");
     }
 
     public String getFirstLineOfEveryShop() {
         return firstLineOfEveryShop;
+    }
+
+    public String getFirstLineOfEveryShopColor() {
+        return firstLineOfEveryShopColor;
+    }
+
+    public boolean isFirstLineOfEveryShop(String text) {
+        return firstLineOfEveryShop.equalsIgnoreCase(text) || firstLineOfEveryShopColor.equalsIgnoreCase(text);
     }
 
     public String getAdminShopName() {
