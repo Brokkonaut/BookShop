@@ -44,7 +44,7 @@ public class BookShopListener implements Listener {
     public void onInventoryClose(InventoryCloseEvent event) {
         Chest chest = BookShopListener.this.chestViewers.remove(event.getPlayer().getUniqueId());
         if (chest != null) {
-            Inventory blockInventory = chest.getBlockInventory();
+            Inventory blockInventory = chest.getInventory();
             Block chestblock = chest.getBlock();
             Block signBlock = chestblock.getRelative(BlockFace.UP);
             if (blockInventory != null && isSign(signBlock)) {
@@ -136,12 +136,12 @@ public class BookShopListener implements Listener {
             event.setCancelled(true);
             return;
         }
-        Chest chest = (Chest) chestblock.getState();
-        if (!isEmpty(chest.getInventory())) {
-            plugin.sendErrorMessage(p, plugin.getConfigHandler().getTranslatedString("Shop.error.nochest"));
-            event.setCancelled(true);
-            return;
-        }
+        // Chest chest = (Chest) chestblock.getState();
+        // if (!isEmpty(chest.getInventory())) {
+        // plugin.sendErrorMessage(p, plugin.getConfigHandler().getTranslatedString("Shop.error.nochest"));
+        // event.setCancelled(true);
+        // return;
+        // }
 
         String playerName;
         if (event.getLine(1).equalsIgnoreCase(plugin.getConfigHandler().getAdminShopName())) {
@@ -327,14 +327,14 @@ public class BookShopListener implements Listener {
         return 0;
     }
 
-    private boolean isEmpty(Inventory inv) {
-        for (ItemStack item : inv.getContents()) {
-            if (item != null && item.getAmount() > 0) {
-                return false;
-            }
-        }
-        return true;
-    }
+    // private boolean isEmpty(Inventory inv) {
+    // for (ItemStack item : inv.getContents()) {
+    // if (item != null && item.getAmount() > 0) {
+    // return false;
+    // }
+    // }
+    // return true;
+    // }
 
     private void buyFromShop(Player player, String[] lines, Sign sign) {
         if (!plugin.checkPermission(player, "BookShop.use")) {
