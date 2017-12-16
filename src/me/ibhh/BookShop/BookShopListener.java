@@ -354,6 +354,10 @@ public class BookShopListener implements Listener {
             return;
         }
 
+        boolean isAdminShop = lines[1].equalsIgnoreCase(plugin.getConfigHandler().getAdminShopName());
+        UUID ownerUUID = isAdminShop ? null : plugin.getNameShortener().getUUID(lines[1]);
+        CachedPlayer owner = isAdminShop ? null : (ownerUUID == null ? plugin.getPlayerUUIDCache().getPlayer(lines[1]) : plugin.getPlayerUUIDCache().getPlayer(ownerUUID));
+
         Inventory chestInventory = null;
         ItemStack item = null;
         BookMeta book = null;
@@ -368,9 +372,13 @@ public class BookShopListener implements Listener {
                 ItemStack stack = chestInventory.getItem(i);
                 if (stack != null && stack.getType() == Material.WRITTEN_BOOK) {
                     if (item == null) {
-                        item = stack;
-                        book = (BookMeta) item.getItemMeta();
-                        existingBooksAmount = stack.getAmount();
+                        book = (BookMeta) stack.getItemMeta();
+                        if (isAdminShop || (owner != null && book.getAuthor() != null && book.getAuthor().equalsIgnoreCase(owner.getName()))) {
+                            item = stack;
+                            existingBooksAmount = stack.getAmount();
+                        } else {
+                            book = null; // invalid
+                        }
                     } else {
                         if (stack.isSimilar(item)) {
                             existingBooksAmount += stack.getAmount();
@@ -386,13 +394,16 @@ public class BookShopListener implements Listener {
         item = item.clone();
         item.setAmount(1);
 
-        if (lines[1].equalsIgnoreCase(plugin.getConfigHandler().getAdminShopName())) {
+        if (isAdminShop) {
+            if (playerInventory.firstEmpty() == -1) {
+                plugin.sendErrorMessage(player, "Du hast keinen freien Platz in deinem Inventar!");
+                return;
+            }
             double price = getPrice(lines, player, false);
             if ((plugin.getEconomyHandler().getBalance(player) - price) < 0 || !plugin.getEconomyHandler().subtractMoney(player, price)) {
                 plugin.sendErrorMessage(player, plugin.getConfigHandler().getTranslatedString("Shop.error.notenoughmoneyconsumer"));
                 return;
             }
-
             playerInventory.addItem(item);
             plugin.sendInfoMessage(player, String.format(plugin.getConfigHandler().getTranslatedString("Shop.success.buy"), book.getTitle(), "AdminShop", plugin.getEconomyHandler().formatMoney(price)));
         } else {
@@ -425,10 +436,14 @@ public class BookShopListener implements Listener {
             } else {
                 playerInventory.removeItem(toRemove);
             }
-            playerInventory.addItem(item);
-
-            UUID ownerUUID = plugin.getNameShortener().getUUID(lines[1]);
-            CachedPlayer owner = ownerUUID == null ? plugin.getPlayerUUIDCache().getPlayer(lines[1]) : plugin.getPlayerUUIDCache().getPlayer(ownerUUID);
+            HashMap<Integer, ItemStack> overflow = playerInventory.addItem(item);
+            if (overflow != null && overflow.size() > 0) {
+                for (ItemStack o : overflow.values()) {
+                    player.getWorld().dropItemNaturally(player.getLocation(), o);
+                }
+            }
+            plugin.getLogger().info(player.getName() + " (" + player.getUniqueId() + ") hat das Buch '" + book.getTitle() + "' (Author: " + book.getAuthor() + ") von " + (isAdminShop ? "AdminShop" : (owner == null ? lines[1] : (owner.getName() + " (" + owner.getUUID() + ")"))) + " für "
+                    + plugin.getEconomyHandler().formatMoney(price) + " gekauft.");
 
             if (owner != null) {
                 plugin.getEconomyHandler().addMoney(plugin.getServer().getOfflinePlayer(owner.getUUID()), price);
