@@ -21,6 +21,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.DoubleChestInventory;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -33,7 +34,7 @@ public class BookShopListener implements Listener {
     private final BookShop plugin;
     private final HashMap<UUID, Chest> chestViewers;
 
-    private static final BlockFace[] DOUBLE_CHEST_FACES = { BlockFace.SELF, BlockFace.EAST, BlockFace.NORTH, BlockFace.WEST, BlockFace.SOUTH };
+    // private static final BlockFace[] DOUBLE_CHEST_FACES = { BlockFace.SELF, BlockFace.EAST, BlockFace.NORTH, BlockFace.WEST, BlockFace.SOUTH };
 
     public BookShopListener(BookShop BookShop) {
         this.plugin = BookShop;
@@ -96,7 +97,7 @@ public class BookShopListener implements Listener {
 
             if (bookItem.getType() == Material.WRITTEN_BOOK) {
                 BookMeta bm = (BookMeta) bookItem.getItemMeta();
-                if (!bm.getAuthor().equalsIgnoreCase(player.getName()) && !player.hasPermission("BookShop.sellother")) {
+                if (!bm.getAuthor().equalsIgnoreCase(player.getName()) && !player.hasPermission("bookshop.sellother")) {
                     this.plugin.sendErrorMessage(player, plugin.getConfigHandler().getTranslatedString("Shop.error.onlyyourbooks"));
                     event.setCancelled(true);
                     return;
@@ -145,13 +146,13 @@ public class BookShopListener implements Listener {
 
         String playerName;
         if (event.getLine(1).equalsIgnoreCase(plugin.getConfigHandler().getAdminShopName())) {
-            if (!plugin.checkPermission(p, "BookShop.admin")) {
+            if (!plugin.checkPermission(p, "bookshop.admin")) {
                 event.setCancelled(true);
                 return;
             }
             playerName = plugin.getConfigHandler().getAdminShopName();
         } else {
-            if (!plugin.checkPermission(p, "BookShop.create")) {
+            if (!plugin.checkPermission(p, "bookshop.create")) {
                 event.setCancelled(true);
                 return;
             }
@@ -162,7 +163,7 @@ public class BookShopListener implements Listener {
                     event.setCancelled(true);
                     return;
                 }
-            } else if (!plugin.checkPermission(p, "BookShop.admin")) {
+            } else if (!plugin.checkPermission(p, "bookshop.admin")) {
                 event.setCancelled(true);
                 return;
             } else {
@@ -288,23 +289,43 @@ public class BookShopListener implements Listener {
 
     private boolean isSign(Block block) {
         Material type = block.getType();
-        return type == Material.SIGN_POST || type == Material.WALL_SIGN;
+        return type == Material.SIGN || type == Material.WALL_SIGN;
     }
 
     private int isProtectedChest(Block block, Player player) {
-        boolean found = false;
-        for (BlockFace bf : DOUBLE_CHEST_FACES) {
-            Block faceBlock = block.getRelative(bf);
-            if (isChest(faceBlock)) {
-                int rv = isThisBlockProtectedChest(faceBlock, player);
-                if (rv == -1) {
+        BlockState bs = block.getState();
+        if (bs instanceof Chest) {
+            Inventory inv = ((Chest) bs).getInventory();
+            if (inv instanceof DoubleChestInventory) {
+                int rv1 = isThisBlockProtectedChest(((DoubleChestInventory) inv).getLeftSide().getLocation().getBlock(), player);
+                if (rv1 == -1) {
                     return -1;
-                } else if (rv == 1) {
-                    found = true;
                 }
+                int rv2 = isThisBlockProtectedChest(((DoubleChestInventory) inv).getRightSide().getLocation().getBlock(), player);
+                if (rv2 == -1) {
+                    return -1;
+                }
+                return (rv1 == 1 || rv2 == 1) ? 1 : 0;
+
+            } else {
+                return isThisBlockProtectedChest(inv.getLocation().getBlock(), player);
             }
         }
-        return found ? 1 : 0;
+        return 0; // no chest?
+
+        // boolean found = false;
+        // for (BlockFace bf : DOUBLE_CHEST_FACES) {
+        // Block faceBlock = block.getRelative(bf);
+        // if (isChest(faceBlock)) {
+        // int rv = isThisBlockProtectedChest(faceBlock, player);
+        // if (rv == -1) {
+        // return -1;
+        // } else if (rv == 1) {
+        // found = true;
+        // }
+        // }
+        // }
+        // return found ? 1 : 0;
     }
 
     private int isThisBlockProtectedChest(Block block, Player player) {
@@ -316,7 +337,7 @@ public class BookShopListener implements Listener {
                 if (plugin.getConfigHandler().isFirstLineOfEveryShop(sign.getLine(0))) {
                     if (!sign.getLine(1).equalsIgnoreCase(plugin.getConfigHandler().getAdminShopName()) && sign.getLine(1).equalsIgnoreCase(plugin.getNameShortener().getShortName(player.getUniqueId(), false))) {
                         return 1;
-                    } else if (plugin.checkPermission(player, "BookShop.admin")) {
+                    } else if (plugin.checkPermission(player, "bookshop.admin")) {
                         return 1;
                     } else {
                         return -1;
@@ -337,7 +358,7 @@ public class BookShopListener implements Listener {
     // }
 
     private void buyFromShop(Player player, String[] lines, Sign sign) {
-        if (!plugin.checkPermission(player, "BookShop.use")) {
+        if (!plugin.checkPermission(player, "bookshop.use")) {
             return;
         }
         if (!isPriceLineValid(lines)) {
@@ -407,8 +428,8 @@ public class BookShopListener implements Listener {
             playerInventory.addItem(item);
             plugin.sendInfoMessage(player, String.format(plugin.getConfigHandler().getTranslatedString("Shop.success.buy"), book.getTitle(), "AdminShop", plugin.getEconomyHandler().formatMoney(price)));
         } else {
-            boolean bookInHand = playerInventory.getItemInMainHand() != null && playerInventory.getItemInMainHand().getType() == Material.BOOK_AND_QUILL;
-            if (!bookInHand && existingBooksAmount <= 1 && chestInventory.first(Material.BOOK_AND_QUILL) < 0) {
+            boolean bookInHand = playerInventory.getItemInMainHand() != null && playerInventory.getItemInMainHand().getType() == Material.WRITABLE_BOOK;
+            if (!bookInHand && existingBooksAmount <= 1 && chestInventory.first(Material.WRITABLE_BOOK) < 0) {
                 plugin.sendErrorMessage(player, plugin.getConfigHandler().getTranslatedString("Shop.error.takeBookandQuill"));
                 return;
             }
@@ -422,7 +443,7 @@ public class BookShopListener implements Listener {
             } else if (existingBooksAmount > 1) {
                 toRemove = item.clone();
             } else {
-                int slotbook = chestInventory.first(Material.BOOK_AND_QUILL);
+                int slotbook = chestInventory.first(Material.WRITABLE_BOOK);
                 toRemove = slotbook >= 0 ? chestInventory.getItem(slotbook).clone() : null;
             }
             toRemove.setAmount(1);

@@ -5,6 +5,7 @@ author: ibhh, Brokkonaut
 softdepend: [Vault, PlayerUUIDCache]
 
 main: me.ibhh.BookShop.BookShop
+api-version: 1.13
 
 commands:
   BookShop:
