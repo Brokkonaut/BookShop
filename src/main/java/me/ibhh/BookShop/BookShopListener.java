@@ -1,8 +1,9 @@
 package me.ibhh.BookShop;
 
+import de.iani.playerUUIDCache.CachedPlayer;
 import java.util.HashMap;
 import java.util.UUID;
-
+import me.ibhh.BookShop.Tools.MaterialUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -27,8 +28,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.ItemMeta;
-
-import de.iani.playerUUIDCache.CachedPlayer;
 
 public class BookShopListener implements Listener {
     private final BookShop plugin;
@@ -289,7 +288,7 @@ public class BookShopListener implements Listener {
 
     private boolean isSign(Block block) {
         Material type = block.getType();
-        return type == Material.SIGN || type == Material.WALL_SIGN;
+        return MaterialUtil.isSign(type);
     }
 
     private int isProtectedChest(Block block, Player player) {
