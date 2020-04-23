@@ -4,6 +4,7 @@ import de.iani.playerUUIDCache.CachedPlayer;
 import java.util.HashMap;
 import java.util.UUID;
 import me.ibhh.BookShop.Tools.MaterialUtil;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -424,6 +425,8 @@ public class BookShopListener implements Listener {
                 plugin.sendErrorMessage(player, plugin.getConfigHandler().getTranslatedString("Shop.error.notenoughmoneyconsumer"));
                 return;
             }
+            Bukkit.getPluginManager().callEvent(new TransactionEvent(player, null, book, price));
+
             playerInventory.addItem(item);
             plugin.sendInfoMessage(player, String.format(plugin.getConfigHandler().getTranslatedString("Shop.success.buy"), book.getTitle(), "AdminShop", plugin.getEconomyHandler().formatMoney(price)));
         } else {
@@ -469,6 +472,8 @@ public class BookShopListener implements Listener {
                 plugin.getEconomyHandler().addMoney(plugin.getServer().getOfflinePlayer(owner.getUUID()), price);
             }
             plugin.sendInfoMessage(player, String.format(plugin.getConfigHandler().getTranslatedString("Shop.success.buy"), book.getTitle(), owner != null ? owner.getName() : lines[1], plugin.getEconomyHandler().formatMoney(price)));
+
+            Bukkit.getPluginManager().callEvent(new TransactionEvent(player, owner, book, price));
 
             Player ownerOnline = owner != null ? plugin.getServer().getPlayer(owner.getUUID()) : null;
             if (ownerOnline != null) {
