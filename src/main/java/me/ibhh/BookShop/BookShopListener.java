@@ -2,16 +2,19 @@ package me.ibhh.BookShop;
 
 import de.iani.playerUUIDCache.CachedPlayer;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.UUID;
-import me.ibhh.BookShop.Tools.MaterialUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
-import org.bukkit.block.Chest;
+import org.bukkit.block.Container;
 import org.bukkit.block.Sign;
+import org.bukkit.block.data.type.WallSign;
+import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -21,7 +24,6 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.DoubleChestInventory;
 import org.bukkit.inventory.Inventory;
@@ -31,22 +33,42 @@ import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 
 public class BookShopListener implements Listener {
-    private final BookShop plugin;
-    private final HashMap<UUID, Chest> chestViewers;
+    private enum ChestProtectionState {
+        OWN_CHEST,
+        FOREIGN_CHEST,
+        NO_BOOKSHOP_CHEST
+    }
 
-    // private static final BlockFace[] DOUBLE_CHEST_FACES = { BlockFace.SELF, BlockFace.EAST, BlockFace.NORTH, BlockFace.WEST, BlockFace.SOUTH };
+    private final BookShop plugin;
+    private final HashSet<UUID> chestViewers;
 
     public BookShopListener(BookShop BookShop) {
         this.plugin = BookShop;
-        this.chestViewers = new HashMap<UUID, Chest>();
+        this.chestViewers = new HashSet<>();
     }
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onInventoryClose(InventoryCloseEvent event) {
-        Chest chest = BookShopListener.this.chestViewers.remove(event.getPlayer().getUniqueId());
-        if (chest != null) {
-            Inventory blockInventory = chest.getInventory();
-            Block chestblock = chest.getBlock();
+        if (BookShopListener.this.chestViewers.remove(event.getPlayer().getUniqueId())) {
+            Block chestblock = null;
+            if (event.getInventory() instanceof DoubleChestInventory dc) {
+                Block block = dc.getLeftSide().getLocation().getBlock();
+                if (isThisBlockProtectedChest(block, event.getPlayer()) == ChestProtectionState.OWN_CHEST) {
+                    chestblock = block;
+                } else {
+                    block = dc.getRightSide().getLocation().getBlock();
+                    if (isThisBlockProtectedChest(block, event.getPlayer()) == ChestProtectionState.OWN_CHEST) {
+                        chestblock = block;
+                    }
+                }
+            } else {
+                Location loc = event.getInventory().getLocation();
+                chestblock = loc == null ? null : loc.getBlock();
+            }
+            if (chestblock == null) {
+                return;
+            }
+            Inventory blockInventory = event.getInventory();
             Block signBlock = chestblock.getRelative(BlockFace.UP);
             if (blockInventory != null && isSign(signBlock)) {
                 Sign sign = (Sign) signBlock.getState();
@@ -82,37 +104,34 @@ public class BookShopListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onInventoryClick(InventoryClickEvent event) {
         Player player = (Player) event.getWhoClicked();
-        Chest openChest = this.chestViewers.get(player.getUniqueId());
-        if (openChest == null) {
+        if (!this.chestViewers.contains(player.getUniqueId())) {
             return;
         }
 
-        if (event.getInventory().getType().equals(InventoryType.CHEST)) {
-            ItemStack bookItem = event.getCurrentItem();
+        ItemStack bookItem = event.getCurrentItem();
 
-            // ablegen und rausnehmen aus der kiste geht immer
-            if (bookItem == null || bookItem.getType() == Material.AIR || event.getClickedInventory() == event.getInventory()) {
+        // ablegen und rausnehmen aus der kiste geht immer
+        if (bookItem == null || bookItem.getType() == Material.AIR || event.getClickedInventory() == event.getInventory()) {
+            return;
+        }
+
+        if (bookItem.getType() == Material.WRITTEN_BOOK) {
+            BookMeta bm = (BookMeta) bookItem.getItemMeta();
+            if (!bm.getAuthor().equalsIgnoreCase(player.getName()) && !player.hasPermission("bookshop.sellother")) {
+                this.plugin.sendErrorMessage(player, plugin.getConfigHandler().getTranslatedString("Shop.error.onlyyourbooks"));
+                event.setCancelled(true);
                 return;
             }
+        }
 
-            if (bookItem.getType() == Material.WRITTEN_BOOK) {
-                BookMeta bm = (BookMeta) bookItem.getItemMeta();
-                if (!bm.getAuthor().equalsIgnoreCase(player.getName()) && !player.hasPermission("bookshop.sellother")) {
-                    this.plugin.sendErrorMessage(player, plugin.getConfigHandler().getTranslatedString("Shop.error.onlyyourbooks"));
+        if (bookItem.getType() == Material.WRITTEN_BOOK) {
+            int slot = event.getInventory().first(Material.WRITTEN_BOOK);
+            if (slot >= 0) {
+                ItemStack existingBook = event.getInventory().getItem(slot);
+                if (!existingBook.isSimilar(bookItem)) {
+                    this.plugin.sendErrorMessage(player, plugin.getConfigHandler().getTranslatedString("Shop.error.onebook"));
                     event.setCancelled(true);
                     return;
-                }
-            }
-
-            if (bookItem.getType() == Material.WRITTEN_BOOK) {
-                int slot = event.getInventory().first(Material.WRITTEN_BOOK);
-                if (slot >= 0) {
-                    ItemStack existingBook = event.getInventory().getItem(slot);
-                    if (!existingBook.isSimilar(bookItem)) {
-                        this.plugin.sendErrorMessage(player, plugin.getConfigHandler().getTranslatedString("Shop.error.onebook"));
-                        event.setCancelled(true);
-                        return;
-                    }
                 }
             }
         }
@@ -137,12 +156,6 @@ public class BookShopListener implements Listener {
             event.setCancelled(true);
             return;
         }
-        // Chest chest = (Chest) chestblock.getState();
-        // if (!isEmpty(chest.getInventory())) {
-        // plugin.sendErrorMessage(p, plugin.getConfigHandler().getTranslatedString("Shop.error.nochest"));
-        // event.setCancelled(true);
-        // return;
-        // }
 
         String playerName;
         if (event.getLine(1).equalsIgnoreCase(plugin.getConfigHandler().getAdminShopName())) {
@@ -214,14 +227,9 @@ public class BookShopListener implements Listener {
                 }
             }
         } else if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-            if (event.hasBlock()) {
-                if (isChest(event.getClickedBlock())) {
-                    int check = isProtectedChest(event.getClickedBlock(), p);
-                    if (check == -1) {
-                        plugin.sendErrorMessage(p, plugin.getConfigHandler().getTranslatedString("Shop.error.notyourshop"));
-                        event.setCancelled(true);
-                    }
-                }
+            if (event.hasBlock() && isProtectedChest(event.getClickedBlock(), p) == ChestProtectionState.FOREIGN_CHEST) {
+                plugin.sendErrorMessage(p, plugin.getConfigHandler().getTranslatedString("Shop.error.notyourshop"));
+                event.setCancelled(true);
             }
         }
     }
@@ -230,13 +238,8 @@ public class BookShopListener implements Listener {
     public void onInteractMonitor(PlayerInteractEvent event) {
         Player p = event.getPlayer();
         if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-            if (event.hasBlock()) {
-                if (isChest(event.getClickedBlock())) {
-                    int check = isProtectedChest(event.getClickedBlock(), p);
-                    if (check == 1) {
-                        chestViewers.put(p.getUniqueId(), (Chest) event.getClickedBlock().getState());
-                    }
-                }
+            if (event.hasBlock() && isProtectedChest(event.getClickedBlock(), p) == ChestProtectionState.OWN_CHEST) {
+                chestViewers.add(p.getUniqueId());
             }
         }
     }
@@ -284,51 +287,37 @@ public class BookShopListener implements Listener {
     }
 
     private boolean isChest(Block block) {
-        return block.getType() == Material.CHEST;
+        return block.getState(false) instanceof Container;
     }
 
     private boolean isSign(Block block) {
-        Material type = block.getType();
-        return MaterialUtil.isSign(type);
+        Class<?> typeData = block.getType().data;
+        return typeData == org.bukkit.block.data.type.Sign.class || typeData == WallSign.class;
     }
 
-    private int isProtectedChest(Block block, Player player) {
-        BlockState bs = block.getState();
-        if (bs instanceof Chest) {
-            Inventory inv = ((Chest) bs).getInventory();
+    private ChestProtectionState isProtectedChest(Block block, HumanEntity player) {
+        BlockState bs = block.getState(false);
+        if (bs instanceof Container) {
+            Inventory inv = ((Container) bs).getInventory();
             if (inv instanceof DoubleChestInventory) {
-                int rv1 = isThisBlockProtectedChest(((DoubleChestInventory) inv).getLeftSide().getLocation().getBlock(), player);
-                if (rv1 == -1) {
-                    return -1;
+                ChestProtectionState rv1 = isThisBlockProtectedChest(((DoubleChestInventory) inv).getLeftSide().getLocation().getBlock(), player);
+                if (rv1 == ChestProtectionState.FOREIGN_CHEST) {
+                    return ChestProtectionState.FOREIGN_CHEST;
                 }
-                int rv2 = isThisBlockProtectedChest(((DoubleChestInventory) inv).getRightSide().getLocation().getBlock(), player);
-                if (rv2 == -1) {
-                    return -1;
+                ChestProtectionState rv2 = isThisBlockProtectedChest(((DoubleChestInventory) inv).getRightSide().getLocation().getBlock(), player);
+                if (rv2 == ChestProtectionState.FOREIGN_CHEST) {
+                    return ChestProtectionState.FOREIGN_CHEST;
                 }
-                return (rv1 == 1 || rv2 == 1) ? 1 : 0;
+                return (rv1 == ChestProtectionState.OWN_CHEST || rv2 == ChestProtectionState.OWN_CHEST) ? ChestProtectionState.OWN_CHEST : ChestProtectionState.NO_BOOKSHOP_CHEST;
 
             } else {
                 return isThisBlockProtectedChest(inv.getLocation().getBlock(), player);
             }
         }
-        return 0; // no chest?
-
-        // boolean found = false;
-        // for (BlockFace bf : DOUBLE_CHEST_FACES) {
-        // Block faceBlock = block.getRelative(bf);
-        // if (isChest(faceBlock)) {
-        // int rv = isThisBlockProtectedChest(faceBlock, player);
-        // if (rv == -1) {
-        // return -1;
-        // } else if (rv == 1) {
-        // found = true;
-        // }
-        // }
-        // }
-        // return found ? 1 : 0;
+        return ChestProtectionState.NO_BOOKSHOP_CHEST; // no chest?
     }
 
-    private int isThisBlockProtectedChest(Block block, Player player) {
+    private ChestProtectionState isThisBlockProtectedChest(Block block, HumanEntity player) {
         Block up = block.getRelative(BlockFace.UP);
         if (up != null && isSign(up)) {
             BlockState upState = up.getState();
@@ -336,26 +325,17 @@ public class BookShopListener implements Listener {
                 Sign sign = (Sign) upState;
                 if (plugin.getConfigHandler().isFirstLineOfEveryShop(sign.getLine(0))) {
                     if (!sign.getLine(1).equalsIgnoreCase(plugin.getConfigHandler().getAdminShopName()) && sign.getLine(1).equalsIgnoreCase(plugin.getNameShortener().getShortName(player.getUniqueId(), false))) {
-                        return 1;
-                    } else if (plugin.checkPermission(player, "bookshop.admin")) {
-                        return 1;
+                        return ChestProtectionState.OWN_CHEST;
+                    } else if (player.hasPermission("bookshop.admin")) {
+                        return ChestProtectionState.OWN_CHEST;
                     } else {
-                        return -1;
+                        return ChestProtectionState.FOREIGN_CHEST;
                     }
                 }
             }
         }
-        return 0;
+        return ChestProtectionState.NO_BOOKSHOP_CHEST;
     }
-
-    // private boolean isEmpty(Inventory inv) {
-    // for (ItemStack item : inv.getContents()) {
-    // if (item != null && item.getAmount() > 0) {
-    // return false;
-    // }
-    // }
-    // return true;
-    // }
 
     private void buyFromShop(Player player, String[] lines, Sign sign) {
         if (!plugin.checkPermission(player, "bookshop.use")) {
@@ -382,11 +362,11 @@ public class BookShopListener implements Listener {
         Inventory chestInventory = null;
         ItemStack item = null;
         BookMeta book = null;
-        Chest chest = null;
+        Container chest = null;
         int existingBooksAmount = 0;
         BlockState blockBelow = sign.getLocation().getBlockY() > 0 ? sign.getBlock().getRelative(BlockFace.DOWN).getState() : null;
-        if (blockBelow instanceof Chest) {
-            chest = (Chest) blockBelow;
+        if (blockBelow instanceof Container) {
+            chest = (Container) blockBelow;
             chestInventory = chest.getInventory();
             int size = chestInventory.getSize();
             for (int i = 0; i < size; i++) {
