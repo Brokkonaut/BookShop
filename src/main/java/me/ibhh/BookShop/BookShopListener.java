@@ -14,6 +14,7 @@ import org.bukkit.block.BlockState;
 import org.bukkit.block.Container;
 import org.bukkit.block.Sign;
 import org.bukkit.block.data.type.WallSign;
+import org.bukkit.block.sign.Side;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -140,7 +141,7 @@ public class BookShopListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onSignChange(SignChangeEvent event) {
         String[] line = event.getLines();
-        if (!plugin.getConfigHandler().isFirstLineOfEveryShop(line[0])) {
+        if (!plugin.getConfigHandler().isFirstLineOfEveryShop(line[0]) || event.getSide() != Side.FRONT) {
             return;
         }
         Player p = event.getPlayer();
@@ -227,9 +228,17 @@ public class BookShopListener implements Listener {
                 }
             }
         } else if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-            if (event.hasBlock() && isProtectedChest(event.getClickedBlock(), p) == ChestProtectionState.FOREIGN_CHEST) {
-                plugin.sendErrorMessage(p, plugin.getConfigHandler().getTranslatedString("Shop.error.notyourshop"));
-                event.setCancelled(true);
+            if (event.hasBlock()) {
+                Block eventblock = event.getClickedBlock();
+                if (isSign(event.getClickedBlock()) && eventblock.getState() instanceof Sign sign) {
+                    String[] line = sign.getLines();
+                    if (plugin.getConfigHandler().isFirstLineOfEveryShop(line[0])) {
+                        event.setCancelled(true);
+                    }
+                } else if (isProtectedChest(event.getClickedBlock(), p) == ChestProtectionState.FOREIGN_CHEST) {
+                    plugin.sendErrorMessage(p, plugin.getConfigHandler().getTranslatedString("Shop.error.notyourshop"));
+                    event.setCancelled(true);
+                }
             }
         }
     }
