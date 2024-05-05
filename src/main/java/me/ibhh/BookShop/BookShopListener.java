@@ -27,6 +27,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.DoubleChestInventory;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -217,7 +218,7 @@ public class BookShopListener implements Listener {
     public void onInteract(PlayerInteractEvent event) {
         Player p = event.getPlayer();
         if (event.getAction() == Action.LEFT_CLICK_BLOCK) {
-            if (event.hasBlock() && !p.isSneaking()) {
+            if (event.getHand() == EquipmentSlot.HAND && event.hasBlock() && !p.isSneaking()) {
                 Block eventblock = event.getClickedBlock();
                 if (isSign(eventblock)) {
                     Sign s = (Sign) eventblock.getState();
