@@ -1,7 +1,10 @@
 package me.ibhh.BookShop;
 
-import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
+
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 
 public class ConfigHandler {
     private BookShop plugin;
@@ -12,6 +15,10 @@ public class ConfigHandler {
 
     private String messagePrefix;
     private String messageColor;
+    private Component messagePrefixComponent;
+    private TextColor messageTextColor;
+    private Component firstLineOfEveryShopComponent;
+    private MessageFormatter messageFormatter;
 
     public ConfigHandler(BookShop pl) {
         plugin = pl;
@@ -20,18 +27,24 @@ public class ConfigHandler {
         plugin.saveConfig();
         plugin.reloadConfig();
 
-        language = plugin.getConfig().getString("language");
+        language = plugin.getConfig().getString("language", "en");
 
         FileConfiguration config = plugin.getConfig();
 
-        ChatColor prefixColor = ChatColor.getByChar(config.getString("PrefixColor"));
-        ChatColor textColor = ChatColor.getByChar(config.getString("TextColor"));
+        String prefixColorCode = config.getString("PrefixColor");
+        String textColorCode = config.getString("TextColor");
+        TextColor prefixColor = MessageFormatter.legacyColor(prefixColorCode);
+        messageTextColor = MessageFormatter.legacyColor(textColorCode);
 
-        messagePrefix = config.getBoolean("UsePrefix") ? ((prefixColor != null ? prefixColor.toString() : "") + "[" + config.getString("Prefix") + "] ") : "";
-        messageColor = textColor == null ? "" : textColor.toString();
-        firstLineOfEveryShop = config.getString("FirstLineOfEveryShop");
-        firstLineOfEveryShopColor = ChatColor.BLUE + firstLineOfEveryShop;
-        adminShopName = config.getString("AdminShop");
+        String prefix = "[" + config.getString("Prefix", "BookShop") + "] ";
+        messagePrefixComponent = config.getBoolean("UsePrefix") ? MessageFormatter.text(prefix, prefixColor) : Component.empty();
+        messagePrefix = config.getBoolean("UsePrefix") ? (MessageFormatter.legacyColorPrefix(prefixColorCode) + prefix) : "";
+        messageColor = MessageFormatter.legacyColorPrefix(textColorCode);
+        firstLineOfEveryShop = config.getString("FirstLineOfEveryShop", "[BookShop]");
+        firstLineOfEveryShopComponent = Component.text(firstLineOfEveryShop, NamedTextColor.BLUE);
+        firstLineOfEveryShopColor = "§9" + firstLineOfEveryShop;
+        adminShopName = config.getString("AdminShop", "AdminShop");
+        messageFormatter = new MessageFormatter(messagePrefixComponent, messageTextColor);
     }
 
     public String getFirstLineOfEveryShop() {
@@ -43,7 +56,12 @@ public class ConfigHandler {
     }
 
     public boolean isFirstLineOfEveryShop(String text) {
-        return firstLineOfEveryShop.equalsIgnoreCase(text) || firstLineOfEveryShopColor.equalsIgnoreCase(text);
+        String normalizedText = MessageFormatter.stripLegacyFormatting(text);
+        return firstLineOfEveryShop.equalsIgnoreCase(normalizedText) || firstLineOfEveryShopColor.equalsIgnoreCase(text);
+    }
+
+    public boolean isFirstLineOfEveryShop(Component text) {
+        return isFirstLineOfEveryShop(MessageFormatter.plain(text));
     }
 
     public String getAdminShopName() {
@@ -58,7 +76,23 @@ public class ConfigHandler {
         return messageColor;
     }
 
+    public Component getMessagePrefixComponent() {
+        return messagePrefixComponent;
+    }
+
+    public TextColor getMessageTextColor() {
+        return messageTextColor;
+    }
+
+    public Component getFirstLineOfEveryShopComponent() {
+        return firstLineOfEveryShopComponent;
+    }
+
+    public MessageFormatter getMessageFormatter() {
+        return messageFormatter;
+    }
+
     public String getTranslatedString(String key) {
-        return plugin.getConfig().getString(key + "." + language);
+        return plugin.getConfig().getString(key + "." + language, key);
     }
 }

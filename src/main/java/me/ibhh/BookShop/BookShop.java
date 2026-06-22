@@ -1,14 +1,12 @@
 package me.ibhh.BookShop;
 
+import de.iani.playerUUIDCache.PlayerUUIDCache;
 import me.ibhh.BookShop.Tools.NameShortener;
-
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-
-import de.iani.playerUUIDCache.PlayerUUIDCache;
 
 public class BookShop extends JavaPlugin {
     private ConfigHandler config;
@@ -27,7 +25,7 @@ public class BookShop extends JavaPlugin {
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        sendInfoMessage(sender, "Version: " + getDescription().getVersion());
+        sendInfoMessage(sender, "Version: " + getPluginMeta().getVersion());
         return true;
     }
 
@@ -47,12 +45,20 @@ public class BookShop extends JavaPlugin {
         return config;
     }
 
-    public void sendInfoMessage(CommandSender p, String msg) {
-        p.sendMessage(config.getMessagePrefix() + config.getMessageColor() + msg);
+    public void sendInfoMessage(CommandSender sender, String message) {
+        sendInfoMessage(sender, Component.text(message == null ? "" : message));
     }
 
-    public void sendErrorMessage(CommandSender p, String msg) {
-        p.sendMessage(config.getMessagePrefix() + ChatColor.RED + "ERROR: " + config.getMessageColor() + msg);
+    public void sendInfoMessage(CommandSender sender, Component message) {
+        sender.sendMessage(config.getMessageFormatter().info(message));
+    }
+
+    public void sendErrorMessage(CommandSender sender, String message) {
+        sendErrorMessage(sender, Component.text(message == null ? "" : message));
+    }
+
+    public void sendErrorMessage(CommandSender sender, Component message) {
+        sender.sendMessage(config.getMessageFormatter().error(message));
     }
 
     public boolean checkPermission(Player player, String action) {

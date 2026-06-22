@@ -64,3 +64,12 @@ Shop:
     takeBookandQuill:
       de: Bitte nimm ein Buch mit Feder in die Hand um ein Buch zu kaufen!
       en: Please take one Book and Quill in the hand to purchase a book!
+    invalidName:
+      de: Ungültiger Name!
+      en: Invalid name!
+    unknownPlayer:
+      de: BookShop konnte nicht erstellt werden, unbekannter Spieler!
+      en: BookShop creation failed, unknown player!
+    ownShop:
+      de: Das ist dein Shop.
+      en: That is your shop.
